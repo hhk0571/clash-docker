@@ -58,12 +58,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Docker Hub Description
-        uses: peter-evans/dockerhub-description@v4
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-          repository: ${{ env.DOCKER_REPO }}
-          short-description: "Clash for Linux - Multi-arch Docker Image"
-          readme-filepath: ./README.md
+      # - name: Docker Hub Description
+      #   uses: peter-evans/dockerhub-description@v4
+      #   if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      #   with:
+      #     username: ${{ secrets.DOCKER_HUB_USERNAME }}
+      #     password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      #     repository: ${{ env.DOCKER_REPO }}
+      #     short-description: "Clash for Linux - Multi-arch Docker Image"
+      #     readme-filepath: ./README.md
