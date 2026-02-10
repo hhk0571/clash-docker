@@ -1,0 +1,11 @@
+# Ignore the following files and directories when building the Docker image
+.git
+*.md
+*.sh
+Dockerfile
+docker-compose.yml
+Makefile
+config/.gitkeep
+config/config.yaml.example
+!config/
+.env

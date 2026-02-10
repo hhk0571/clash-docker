@@ -1,0 +1,35 @@
+services:
+  clash:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: clash-for-linux:latest
+    environment:
+      # Proxy settings (optional, remove if not needed)
+      # - HTTP_PROXY=http://10.10.10.9:8080
+      # - HTTPS_PROXY=http://10.10.10.9:8080
+      # - http_proxy=http://10.10.10.9:8080
+      # - https_proxy=http://10.10.10.9:8080
+      # - NO_PROXY=127.0.0.1,localhost
+      # - no_proxy=127.0.0.1,localhost
+
+      # Clash subscription URL (set this to your subscription link)
+      - CLASH_SUBSCRIPTION_URL=https://your-subscription-url
+      # Interval (in seconds) to check for configuration updates (default: 3600 = 1 hour)
+      - CLASH_UPDATE_INTERVAL=3600
+
+      # Clash secret for API authentication (comment out to use config default)
+      # - CLASH_SECRET=your-secret-key
+
+      # Override DNS settings (true/false, comment out to use config default)
+      - CLASH_DNS_ENABLE=false  # Set to false in corporate environments with custom DNS
+    ports:
+      - "7890:7890"  # HTTP proxy
+      - "7891:7891"  # SOCKS5 proxy
+      - "9091:9090"  # External controller / Dashboard (host:port -> container:9090)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9090/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
