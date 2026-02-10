@@ -1,0 +1,19 @@
+proxy:
+  mode: Rule
+  log-level: info
+  dns:
+    enable: true
+    listen: 0.0.0.0:53
+    default-nameserver:
+      - 8.8.8.8
+      - 1.1.1.1
+    enhanced-mode: fake-ip
+    fake-ip-range: 198.18.0.1/16
+  rules:
+    - DOMAIN-SUFFIX,example.com,Proxy
+    - DOMAIN-KEYWORD,example,Proxy
+    - GEOIP,CN,DIRECT
+    - MATCH,Proxy
+
+# This is an example configuration file for Clash for Linux.
+# Please modify the rules and settings according to your needs.
