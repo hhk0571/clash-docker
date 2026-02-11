@@ -69,6 +69,7 @@ services:
 
 ## 查看UI 界面
 浏览器打开 URL:  http://<宿主机地址>:9091/ui
+
 ![UI web login](snapshots/ui_login.png)
 
 打开后在后端地址栏填上 http://<宿主机地址>:9091
