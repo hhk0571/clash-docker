@@ -43,9 +43,11 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/v}
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
             echo "TAGS=${{ env.DOCKER_REPO }}:${VERSION},${{ env.DOCKER_REPO }}:latest" >> $GITHUB_OUTPUT
+            echo "IS_TAG=true" >> $GITHUB_OUTPUT
           else
             echo "VERSION=latest" >> $GITHUB_OUTPUT
             echo "TAGS=${{ env.DOCKER_REPO }}:latest" >> $GITHUB_OUTPUT
+            echo "IS_TAG=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Build and push
@@ -53,7 +55,8 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.event_name != 'pull_request' }}
+          # Only push when it's a tag, otherwise just build for testing
+          push: ${{ steps.version.outputs.IS_TAG == 'true' }}
           tags: ${{ steps.version.outputs.TAGS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -5,8 +5,8 @@ ARG BUILDPLATFORM=linux/amd64
 ARG TARGETPLATFORM=linux/amd64
 ARG TARGETARCH=amd64
 
-# Install necessary dependencies
-RUN apk add --no-cache curl bash wget gzip tar
+# Install necessary dependencies (tzdata needed for TZ environment variable)
+RUN apk add --no-cache curl bash wget gzip tar tzdata
 
 # Set the working directory
 WORKDIR /clash-for-linux
@@ -30,24 +30,19 @@ RUN MIHOMO_VERSION="v1.19.20" && \
     chmod +x /usr/local/bin/clash
 
 # Download and extract MetaCubeXD dashboard
-RUN METACUBEXD_VERSION="v1.235.0" && \
+RUN mkdir -p /root/.config/clash/dashboard && \
+    METACUBEXD_VERSION="v1.241.0" && \
     echo "Downloading MetaCubeXD dashboard ${METACUBEXD_VERSION}..." && \
     wget -O /tmp/dashboard.tgz "https://github.com/MetaCubeX/metacubexd/releases/download/${METACUBEXD_VERSION}/compressed-dist.tgz" && \
-    mkdir -p /clash-for-linux/dashboard && \
-    tar -xzf /tmp/dashboard.tgz -C /clash-for-linux/dashboard/ && \
+    tar -xzf /tmp/dashboard.tgz -C /root/.config/clash/dashboard/ && \
     rm /tmp/dashboard.tgz && \
     echo "MetaCubeXD dashboard downloaded and extracted"
 
 # Download GeoIP database and copy to runtime directory
 RUN echo "Downloading GeoIP database..." && \
-    wget -O /clash-for-linux/geoip.metadb \
+    wget -O /root/.config/clash/geoip.metadb \
     https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb && \
-    echo "GeoIP database downloaded: $(ls -lh /clash-for-linux/geoip.metadb | awk '{print $5}')"
-
-# Create runtime config directory and copy dashboard + geoip
-RUN mkdir -p /root/.config/clash && \
-    cp -r /clash-for-linux/dashboard /root/.config/clash/ && \
-    cp /clash-for-linux/geoip.metadb /root/.config/clash/geoip.metadb
+    echo "GeoIP database downloaded: $(ls -lh /root/.config/clash/geoip.metadb | awk '{print $5}')"
 
 # Copy configuration files
 COPY config/config.yaml.example /config/config.yaml.example

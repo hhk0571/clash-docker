@@ -6,8 +6,9 @@
 ## docker run 命令
 
 ```bash
-# 设置clash订阅地址
+# 设置clash订阅地址和更新间隔(单位:秒), 3600秒=1小时
 export CLASH_SUB_URL=https://your-subscription-ur
+export CLASH_UPDATE_INTERVAL=10800 # 3 hours
 
 docker run -d \
   --name clash \
@@ -15,6 +16,8 @@ docker run -d \
   -p 7891:7891 \
   -p 9091:9090 \
   -e CLASH_SUBSCRIPTION_URL=${CLASH_SUB_URL} \
+  -e CLASH_UPDATE_INTERVAL=${CLASH_UPDATE_INTERVAL} \
+  -v ./config:/app/config \
   --health-cmd "curl -f http://127.0.0.1:9090/version || exit 1" \
   --health-interval 30s \
   --health-timeout 10s \
@@ -34,31 +37,35 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: hhk0571/clash-for-linux:latest # 改成这样
+    image: hhk0571/clash-for-linux:latest
     environment:
-      # Proxy settings/代理设置 (optional, remove if not needed/ 若无需代理, 注释掉下面这几行 )
-      # - HTTP_PROXY=http://10.10.10.9:8080
-      # - HTTPS_PROXY=http://10.10.10.9:8080
-      # - http_proxy=http://10.10.10.9:8080
-      # - https_proxy=http://10.10.10.9:8080
-      # - NO_PROXY=127.0.0.1,localhost
-      # - no_proxy=127.0.0.1,localhost
+      ## Timezone setting
+      TZ: Asia/Shanghai
 
-      # Clash subscription URL / clash 订阅链接
-      - CLASH_SUBSCRIPTION_URL=https://your-subscription-url
+      ## Proxy settings/代理设置 (optional, remove if not needed/ 若无需代理, 注释掉下面这几行 )
+      # HTTP_PROXY: http://10.10.10.9:8080
+      # HTTPS_PROXY: http://10.10.10.9:8080
+      # http_proxy: http://10.10.10.9:8080
+      # https_proxy: http://10.10.10.9:8080
+      # NO_PROXY: 127.0.0.1,localhost
+      # no_proxy: 127.0.0.1,localhost
 
-      # Interval (in seconds) to check for configuration updates (default: 3600 = 1 hour)
-      - CLASH_UPDATE_INTERVAL=3600 # 订阅更新间隔(单位:秒), 3600秒=1小时
+      ## Clash subscription URL / clash 订阅链接 (required/必填)
+      CLASH_SUBSCRIPTION_URL: https://your-subscription-url
+      ## Interval (in seconds) to check for configuration updates (default: 3600 = 1 hour)
+      CLASH_UPDATE_INTERVAL: 10800 # 3 hours 订阅更新间隔(单位:秒)
 
-      # Clash secret for API authentication (comment out to use config default)
-      #- CLASH_SECRET=your-secret-key # UI 界面的密码, 可用命令 openssl rand -hex 32 生成随机密码.
+      ## Clash secret for API authentication (comment out to use config default)
+      # CLASH_SECRET: your-secret-key # 仪表盘界面访问密码, 觉得必要再设置
 
-      # Override DNS settings (true/false, comment out to use config default)
-      #- CLASH_DNS_ENABLE=false  # Set to false in corporate environments with custom DNS (保持注释就好, 需要时再设为false)
+      ## Disable DNS only when you really need to
+      # DISABLE_CLASH_DNS: true # 保持注释就好, 觉得必要再设置
     ports:
       - "7890:7890"  # HTTP proxy
       - "7891:7891"  # SOCKS5 proxy
       - "9091:9090"  # External controller / Dashboard (host:port -> container:9090) / 根据需要设置宿主机端口
+    volumes:
+      - ./config:/app/config
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:9090/version"]
       interval: 30s
