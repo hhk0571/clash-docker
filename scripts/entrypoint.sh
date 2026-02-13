@@ -90,6 +90,14 @@ update_config_loop() {
             fi
             apply_config_overrides "$config_file"
             echo "[$(date)] Configuration updated successfully"
+
+            echo "[$(date)] reload Clash configuration"
+            if [ -n "$CLASH_SECRET" ]; then
+                curl -X PUT "http://127.0.0.1:9090/configs/?force=true" -H "Content-Type: application/json" -d '{"path": ""}' -H "Authorization: Bearer ${CLASH_SECRET}"
+            else
+                curl -X PUT "http://127.0.0.1:9090/configs/?force=true" -H "Content-Type: application/json" -d '{"path": ""}'
+            fi
+
         else
             echo "[$(date)] Failed to update configuration"
         fi
