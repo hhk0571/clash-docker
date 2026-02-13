@@ -1,6 +1,8 @@
 # clash-docker
 简单易用的 Clash (代理) + Mihomo(Clash Meta 管理面板) docker
 
+docker hub: https://hub.docker.com/r/hhk0571/clash-for-linux
+
 # 使用方法
 
 ## docker run 命令
