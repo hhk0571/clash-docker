@@ -8,9 +8,9 @@ docker hub: https://hub.docker.com/r/hhk0571/clash-for-linux
 ## docker run 命令
 
 ```bash
-# 设置clash订阅地址和更新间隔(单位:秒), 3600秒=1小时
+# 设置clash订阅地址和更新间隔(单位:小时)
 export CLASH_SUB_URL=https://your-subscription-ur
-export CLASH_UPDATE_INTERVAL=10800 # 3 hours
+export CLASH_UPDATE_HOURS=24 # 每24小时更新一次订阅
 
 docker run -d \
   --name clash \
@@ -18,7 +18,7 @@ docker run -d \
   -p 7891:7891 \
   -p 9091:9090 \
   -e CLASH_SUBSCRIPTION_URL=${CLASH_SUB_URL} \
-  -e CLASH_UPDATE_INTERVAL=${CLASH_UPDATE_INTERVAL} \
+  -e CLASH_UPDATE_HOURS=${CLASH_UPDATE_HOURS} \
   -v ./config:/app/config \
   --health-cmd "curl -f http://127.0.0.1:9090/version || exit 1" \
   --health-interval 30s \
@@ -36,9 +36,6 @@ docker run -d \
 ```yaml
 services:
   clash:
-    build:
-      context: .
-      dockerfile: Dockerfile
     image: hhk0571/clash-for-linux:latest
     environment:
       ## Timezone setting
@@ -54,8 +51,9 @@ services:
 
       ## Clash subscription URL / clash 订阅链接 (required/必填)
       CLASH_SUBSCRIPTION_URL: https://your-subscription-url
-      ## Interval (in seconds) to check for configuration updates (default: 3600 = 1 hour)
-      CLASH_UPDATE_INTERVAL: 10800 # 3 hours 订阅更新间隔(单位:秒)
+      ## Interval (in hours) to check for configuration updates (default: 8 hours)
+      ## 订阅更新间隔(单位:小时, 默认:8小时)
+      CLASH_UPDATE_HOURS: 24 # Update every 24 hours 每24小时更新一次
 
       ## Clash secret for API authentication (comment out to use config default)
       # CLASH_SECRET: your-secret-key # 仪表盘界面访问密码, 觉得必要再设置

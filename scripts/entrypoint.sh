@@ -18,7 +18,7 @@ download_config() {
     local masked_url=$(echo "$url" | sed -E 's|(https?://[^/]+/).*|\1***|')
     echo "[$(date)] Downloading configuration from: $masked_url"
 
-    if curl -f -L --connect-timeout 5 -o "$target.tmp" "$url" 2>/dev/null; then
+    if curl -f -L --connect-timeout 10 --max-time 30 -o "$target.tmp" "$url" 2>/dev/null; then
         if [ -s "$target.tmp" ]; then
             mv "$target.tmp" "$target"
             echo "[$(date)] Configuration downloaded successfully"
@@ -76,7 +76,7 @@ apply_config_overrides() {
 update_config_loop() {
     local url=$1
     local config_file=$2
-    local interval=${3:-3600}  # Default: 1 hour
+    local interval=${3:-28800}  # Default: 8 hours
     local raw_config_file="/app/config/config.yaml"
 
     while true; do
@@ -106,7 +106,12 @@ update_config_loop() {
 
 CONFIG_FILE="/root/.config/clash/config.yaml"
 SUBSCRIPTION_URL="${CLASH_SUBSCRIPTION_URL}"
-UPDATE_INTERVAL="${CLASH_UPDATE_INTERVAL:-3600}"  # Default: 1 hour
+
+# Extract leading digits (hours); fallback to 8 if empty or invalid
+HOURS=$(echo "$CLASH_UPDATE_HOURS" | sed 's/[^0-9].*//')
+[ -z "$HOURS" ] && HOURS=8
+UPDATE_INTERVAL=$((HOURS * 3600))
+echo "[$(date)] Configuration update interval: ${HOURS} hours"
 
 # Priority 1: Subscription URL (if provided in environment)
 if [ -n "$SUBSCRIPTION_URL" ]; then

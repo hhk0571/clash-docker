@@ -1,14 +1,19 @@
 services:
   clash:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   args:
+    #     http_proxy: ${http_proxy:-}
+    #     HTTP_PROXY: "${http_proxy:-}"
+    #     https_proxy: "${http_proxy:-}"
+    #     HTTPS_PROXY: "${http_proxy:-}"
     image: hhk0571/clash-for-linux:latest
     environment:
       ## Timezone setting
       TZ: Asia/Shanghai
 
-      ## Proxy settings (optional, remove if not needed)
+      # # Proxy settings (optional, remove if not needed)
       # HTTP_PROXY: http://10.10.10.9:8080
       # HTTPS_PROXY: http://10.10.10.9:8080
       # http_proxy: http://10.10.10.9:8080
@@ -18,8 +23,8 @@ services:
 
       ## Clash subscription URL (set this to your subscription link)
       CLASH_SUBSCRIPTION_URL: https://your-subscription-url
-      ## Interval (in seconds) to check for configuration updates (default: 3600 = 1 hour)
-      CLASH_UPDATE_INTERVAL: 10800 # 3 hours
+      ## Interval (in hours) to check for configuration updates (default: 8 hours)
+      CLASH_UPDATE_HOURS: 24 # Update every 24 hours
 
       ## Clash secret for API authentication (comment out to use config default)
       # CLASH_SECRET: your-secret-key

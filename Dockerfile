@@ -4,9 +4,10 @@ FROM --platform=$BUILDPLATFORM alpine:3.19
 ARG BUILDPLATFORM=linux/amd64
 ARG TARGETPLATFORM=linux/amd64
 ARG TARGETARCH=amd64
-
 # Install necessary dependencies (tzdata needed for TZ environment variable)
-RUN apk add --no-cache curl bash wget gzip tar tzdata
+RUN { [ -n "${http_proxy}" ] && echo "Using proxy: ${http_proxy}" || true; } \
+    && apk add --no-cache curl bash wget gzip tar tzdata \
+    && rm -rf /tmp/* /var/tmp/* /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Set the working directory
 WORKDIR /clash-for-linux
@@ -27,7 +28,9 @@ RUN MIHOMO_VERSION="v1.19.20" && \
     wget -O /tmp/clash.gz "https://github.com/MetaCubeX/mihomo/releases/download/${MIHOMO_VERSION}/mihomo-${CLASH_ARCH}-${MIHOMO_VERSION}.gz" && \
     gunzip /tmp/clash.gz && \
     mv /tmp/clash /usr/local/bin/clash && \
-    chmod +x /usr/local/bin/clash
+    chmod +x /usr/local/bin/clash #&& \
+    rm -rf /tmp/* /var/tmp/* && \
+    echo "Mihomo ${MIHOMO_VERSION} downloaded and installed as /usr/local/bin/clash"
 
 # Download and extract MetaCubeXD dashboard
 RUN mkdir -p /root/.config/clash/dashboard && \
@@ -35,13 +38,15 @@ RUN mkdir -p /root/.config/clash/dashboard && \
     echo "Downloading MetaCubeXD dashboard ${METACUBEXD_VERSION}..." && \
     wget -O /tmp/dashboard.tgz "https://github.com/MetaCubeX/metacubexd/releases/download/${METACUBEXD_VERSION}/compressed-dist.tgz" && \
     tar -xzf /tmp/dashboard.tgz -C /root/.config/clash/dashboard/ && \
-    rm /tmp/dashboard.tgz && \
+    rm -rf /tmp/* /var/tmp/* && \
     echo "MetaCubeXD dashboard downloaded and extracted"
 
 # Download GeoIP database and copy to runtime directory
-RUN echo "Downloading GeoIP database..." && \
+RUN mkdir -p /root/.config/clash && \
+    echo "Downloading GeoIP database..." && \
     wget -O /root/.config/clash/geoip.metadb \
     https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb && \
+    rm -rf /tmp/* /var/tmp/* && \
     echo "GeoIP database downloaded: $(ls -lh /root/.config/clash/geoip.metadb | awk '{print $5}')"
 
 # Copy configuration files
