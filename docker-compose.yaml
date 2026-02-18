@@ -1,45 +1,40 @@
 services:
   clash:
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
-    #   args:
-    #     http_proxy: ${http_proxy:-}
-    #     HTTP_PROXY: "${http_proxy:-}"
-    #     https_proxy: "${http_proxy:-}"
-    #     HTTPS_PROXY: "${http_proxy:-}"
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        http_proxy: "${http_proxy:-}"
+        HTTP_PROXY: "${http_proxy:-}"
+        https_proxy: "${http_proxy:-}"
+        HTTPS_PROXY: "${http_proxy:-}"
     image: hhk0571/clash-for-linux:latest
     environment:
       ## Timezone setting
       TZ: Asia/Shanghai
 
-      # # Proxy settings (optional, remove if not needed)
-      # HTTP_PROXY: http://10.10.10.9:8080
-      # HTTPS_PROXY: http://10.10.10.9:8080
-      # http_proxy: http://10.10.10.9:8080
-      # https_proxy: http://10.10.10.9:8080
-      # NO_PROXY: 127.0.0.1,localhost
-      # no_proxy: 127.0.0.1,localhost
+      ## Proxy settings (optional, remove if not needed)
+      # HTTP_PROXY: "${http_proxy:-}"
+      # HTTPS_PROXY: "${http_proxy:-}"
+      # http_proxy: "${http_proxy:-}"
+      # https_proxy: "${http_proxy:-}"
+      # NO_PROXY: "${no_proxy:-}"
+      # no_proxy: "${no_proxy:-}"
 
-      ## Clash subscription URL (set this to your subscription link)
-      CLASH_SUBSCRIPTION_URL: https://your-subscription-url
-      ## Interval (in hours) to check for configuration updates (default: 8 hours)
-      CLASH_UPDATE_HOURS: 24 # Update every 24 hours
-
-      ## Clash secret for API authentication (comment out to use config default)
-      # CLASH_SECRET: your-secret-key
-
+      ## Clash subscription URL (required)
+      CLASH_SUBSCRIPTION_URL: ${CLASH_SUBSCRIPTION_URL:-}
+      ## Clash secret for API authentication (default is empty)
+      CLASH_SECRET: ${CLASH_SECRET:-}
+      ## Update hour (0-23) for daily subscription updates (default is 3)
+      CLASH_UPDATE_HOUR: ${CLASH_UPDATE_HOUR:-3}
+      ## Interval (in hours) to check for configuration updates
+      CLASH_UPDATE_INTERVAL: ${CLASH_UPDATE_INTERVAL:-}
       ## Disable DNS only when you really need to
-      # DISABLE_CLASH_DNS: true
+      # DISABLE_CLASH_DNS: ${DISABLE_CLASH_DNS:-}
     ports:
       - "7890:7890"  # HTTP proxy
       - "7891:7891"  # SOCKS5 proxy
       - "9091:9090"  # External controller / Dashboard (host:port -> container:9090)
     volumes:
       - ./config:/app/config
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:9090/version"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     restart: unless-stopped

@@ -6,7 +6,7 @@ ARG TARGETPLATFORM=linux/amd64
 ARG TARGETARCH=amd64
 # Install necessary dependencies (tzdata needed for TZ environment variable)
 RUN { [ -n "${http_proxy}" ] && echo "Using proxy: ${http_proxy}" || true; } \
-    && apk add --no-cache curl bash wget gzip tar tzdata \
+    && apk add --no-cache curl bash wget gzip tar tzdata dcron \
     && rm -rf /tmp/* /var/tmp/* /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Set the working directory
@@ -55,9 +55,12 @@ COPY config/config.yaml.example /config/config.yaml.example
 # Expose the necessary ports (adjust as needed)
 EXPOSE 7890 7891 9090
 
-# Copy entrypoint script
-COPY scripts/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Copy healthcheck script and use it for Docker HEALTHCHECK
+COPY scripts/*.sh /app/scripts/
+RUN chmod +x /app/scripts/*.sh
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD ["/bin/sh", "/app/scripts/healthcheck.sh"]
 
 # Set the entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]
