@@ -42,14 +42,14 @@ services:
     image: hhk0571/clash-for-linux:latest
     environment:
       TZ: Asia/Shanghai
-      ### 订阅链接 (必填) 若要链接订阅, 需要打开 SUBCONVERTER_ENABLED
+      ### (必填)订阅链接. 若想多链接订阅, 需要打开 SUBCONVERTER_ENABLED
       ### 若不打开 SUBCONVERTER_ENABLED 则只会使用第一条 URL 直接下载
       CLASH_SUBSCRIPTION_URL: |
         https://example.com/sub1
         https://example.com/sub2
-      ### Clash 控制器/仪表盘密码 ###
-      CLASH_API_SECRET: "your-secret"
-      ### 启用本地 subconverter 服务进行多订阅合并 ###
+      ### (可选) Clash 控制器/仪表盘密码 ###
+      # CLASH_API_SECRET: "your-secret"
+      ### (可选) 启用本地 subconverter 服务进行多订阅合并 ###
       # SUBCONVERTER_ENABLED: true
     ports:
       - "7890:7890"  # HTTP proxy
@@ -65,7 +65,7 @@ services:
 - `CLASH_API_SECRET`：(可选) Clash 控制器/仪表盘的认证密钥。
 - `SUBCONVERTER_ENABLED`：(可选 `true`/`false`) 是否启用本地 subconverter（true/false）。启用后会把 URL 发送到本地 subconverter 进行转换与合并。
 - `CLASH_UPDATE_HOUR`：(可选) 每天定时更新的小时（0-23），默认 `3`（凌晨 3 点）。
-- `CLASH_UPDATE_INTERVAL`：(可选) 按小时周期更新（>0），设置后覆盖 `CLASH_UPDATE_HOUR` 的定时策略。
+- `CLASH_UPDATE_INTERVAL`：(可选) 从0时起每隔几个小时更新（1-23），设置后覆盖 `CLASH_UPDATE_HOUR` 的定时策略。比如设置为 `8` 则每 8 小时更新一次(即0、8、16点)。
 - `ALLOW_INSECURE_TLS`：(可选 `true`/`false`) 设为`true` 时允许跳过 TLS 证书验证（仅在特殊场景下使用, 比如证书问题, 但不推荐长期使用）。
 - `SUBSCRIPTION_USER_AGENT`：(可选) 有些订阅下载需要使用的 User-Agent, 已内置默认值, 亦可自定义。
 - `SUBSCRIPTION_HEADERS`：(可选) 下载订阅时额外的自定义头。
