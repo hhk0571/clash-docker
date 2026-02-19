@@ -49,6 +49,27 @@ RUN mkdir -p /root/.config/clash && \
     rm -rf /tmp/* /var/tmp/* && \
     echo "GeoIP database downloaded: $(ls -lh /root/.config/clash/geoip.metadb | awk '{print $5}')"
 
+
+# Download subconverter and copy to runtime directory
+RUN mkdir -p /app/tools && \
+    SUBCONVERTER_VERSION="v0.9.0" && \
+    case ${TARGETARCH} in \
+        amd64) \
+            SUBCONVERTER_ARCH="linux64" ;; \
+        arm64) \
+            SUBCONVERTER_ARCH="aarch64" ;; \
+        arm) \
+            SUBCONVERTER_ARCH="armv7" ;; \
+        *) \
+            echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    echo "Downloading subconverter ${SUBCONVERTER_VERSION} for $SUBCONVERTER_ARCH..." && \
+    wget -O /tmp/subconverter.tar.gz "https://github.com/tindy2013/subconverter/releases/download/${SUBCONVERTER_VERSION}/subconverter_${SUBCONVERTER_ARCH}.tar.gz" && \
+    tar -xzf /tmp/subconverter.tar.gz -C /app/tools && \
+    chmod +x /app/tools/subconverter/subconverter && \
+    rm -rf /tmp/* /var/tmp/* && \
+    echo "Subconverter ${SUBCONVERTER_VERSION} downloaded and installed"
+
 # Copy configuration files
 COPY config/config.yaml.example /config/config.yaml.example
 

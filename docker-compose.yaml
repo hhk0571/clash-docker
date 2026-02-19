@@ -21,16 +21,25 @@ services:
       # NO_PROXY: "${no_proxy:-}"
       # no_proxy: "${no_proxy:-}"
 
-      ## Clash subscription URL (required)
-      CLASH_SUBSCRIPTION_URL: ${CLASH_SUBSCRIPTION_URL:-}
-      ## Clash secret for API authentication (default is empty)
-      CLASH_SECRET: ${CLASH_SECRET:-}
+      ## Clash subscription URL (required) — supports single or multiple entries.
+      ## Recommended in `docker-compose.yml` (YAML block scalar):
+      CLASH_SUBSCRIPTION_URL: |
+        https://example.com/sub1
+        https://example.com/sub2
+      ## Note: .env files usually don't support YAML block scalars; use a
+      ## comma-separated value or set a single URL in that case.
+      # CLASH_SUBSCRIPTION_URL: ${CLASH_SUBSCRIPTION_URL:-}
+      ## Clash API secret for external UI authentication (default is empty)
+      CLASH_API_SECRET: ${CLASH_API_SECRET:-}
+      ## Enable local subconverter for multi-subscription merging (default is false)
+      SUBCONVERTER_ENABLED: ${SUBCONVERTER_ENABLED:-false}
       ## Update hour (0-23) for daily subscription updates (default is 3)
       CLASH_UPDATE_HOUR: ${CLASH_UPDATE_HOUR:-3}
       ## Interval (in hours) to check for configuration updates
       CLASH_UPDATE_INTERVAL: ${CLASH_UPDATE_INTERVAL:-}
       ## Disable DNS only when you really need to
       # DISABLE_CLASH_DNS: ${DISABLE_CLASH_DNS:-}
+
     ports:
       - "7890:7890"  # HTTP proxy
       - "7891:7891"  # SOCKS5 proxy
