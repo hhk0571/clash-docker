@@ -12,20 +12,23 @@ RUN { [ -n "${http_proxy}" ] && echo "Using proxy: ${http_proxy}" || true; } \
 # Set the working directory
 WORKDIR /clash-for-linux
 
-# Download Clash Meta binary based on target architecture
-RUN MIHOMO_VERSION="v1.19.20" && \
+# Download Clash Meta binary based on target architecture.
+# amd64: use mihomo-linux-amd64-v1-<version>.gz (x86-64-v1 baseline). The short name
+# mihomo-linux-amd64-<version>.gz is the v3 microarchitecture build and fails on older
+# CPUs with: "This program can only be run on AMD64 processors with v3 microarchitecture support."
+RUN MIHOMO_VERSION="v1.19.24" && \
     case ${TARGETARCH} in \
         amd64) \
-            CLASH_ARCH="linux-amd64" ;; \
+            CLASH_ASSET="mihomo-linux-amd64-v1-${MIHOMO_VERSION}.gz" ;; \
         arm64) \
-            CLASH_ARCH="linux-arm64" ;; \
+            CLASH_ASSET="mihomo-linux-arm64-${MIHOMO_VERSION}.gz" ;; \
         arm) \
-            CLASH_ARCH="linux-armv7" ;; \
+            CLASH_ASSET="mihomo-linux-armv7-${MIHOMO_VERSION}.gz" ;; \
         *) \
             echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
     esac && \
-    echo "Building for ${TARGETPLATFORM}, downloading Mihomo ${MIHOMO_VERSION} for $CLASH_ARCH..." && \
-    wget -O /tmp/clash.gz "https://github.com/MetaCubeX/mihomo/releases/download/${MIHOMO_VERSION}/mihomo-${CLASH_ARCH}-${MIHOMO_VERSION}.gz" && \
+    echo "Building for ${TARGETPLATFORM}, downloading Mihomo ${MIHOMO_VERSION} (${CLASH_ASSET})..." && \
+    wget -O /tmp/clash.gz "https://github.com/MetaCubeX/mihomo/releases/download/${MIHOMO_VERSION}/${CLASH_ASSET}" && \
     gunzip /tmp/clash.gz && \
     mv /tmp/clash /usr/local/bin/clash && \
     chmod +x /usr/local/bin/clash #&& \
@@ -34,7 +37,7 @@ RUN MIHOMO_VERSION="v1.19.20" && \
 
 # Download and extract MetaCubeXD dashboard
 RUN mkdir -p /root/.config/clash/dashboard && \
-    METACUBEXD_VERSION="v1.241.0" && \
+    METACUBEXD_VERSION="v1.247.1" && \
     echo "Downloading MetaCubeXD dashboard ${METACUBEXD_VERSION}..." && \
     wget -O /tmp/dashboard.tgz "https://github.com/MetaCubeX/metacubexd/releases/download/${METACUBEXD_VERSION}/compressed-dist.tgz" && \
     tar -xzf /tmp/dashboard.tgz -C /root/.config/clash/dashboard/ && \
