@@ -286,6 +286,16 @@ apply_config_overrides() {
         fi
     fi
 
+    # Strip IP/hostname from external-controller so it binds on 0.0.0.0
+    # Handles: '127.0.0.1:9090', 127.0.0.1:9090, localhost:9090, etc.
+    if grep -qE '^external-controller:' "$config_file"; then
+        log "🌐 Stripping IP from external-controller to bind on 0.0.0.0"
+        sed -i 's/^\(external-controller:[[:space:]]*\)[^:]*:\([0-9]*\).*/\1:\2/' "$config_file"
+    else
+        log "🌐 external-controller not found in config, adding default :9090"
+        echo "external-controller: :9090" >> "$config_file"
+    fi
+
     # Disable DNS only when explicitly requested
     if [ -n "${DISABLE_CLASH_DNS:-}" ]; then
         case "$(echo "$DISABLE_CLASH_DNS" | tr '[:upper:]' '[:lower:]')" in
