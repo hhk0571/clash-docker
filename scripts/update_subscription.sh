@@ -125,8 +125,6 @@ download_config_from_subconverter() {
 
     mv "$tmp_target" "$target"
     log "✅ Subconverter config downloaded to $target"
-    cp "$target" "$APP_CONFIG_FILE" 2>/dev/null || true
-    log "💾 Copied downloaded config to ${APP_CONFIG_FILE} for backup"
     return 0
 }
 
@@ -220,9 +218,6 @@ download_config_from_url() {
 
     mv "$tmp_target" "$target"
     log "✅ Subscription downloaded to $target"
-
-    cp "$target" "$APP_CONFIG_FILE" 2>/dev/null || true
-    log "💾 Copied downloaded config to ${APP_CONFIG_FILE} for backup"
     return 0
 }
 
@@ -296,6 +291,15 @@ apply_config_overrides() {
         echo "external-controller: :9090" >> "$config_file"
     fi
 
+    # Allow non-localhost connections for Docker port mapping
+    if grep -qE '^allow-lan:' "$config_file"; then
+        log "🌐 Setting allow-lan: true for Docker port mapping"
+        sed -i 's/^allow-lan:.*/allow-lan: true/' "$config_file"
+    else
+        log "🌐 allow-lan not found in config, adding allow-lan: true"
+        echo "allow-lan: true" >> "$config_file"
+    fi
+
     # Disable DNS only when explicitly requested
     if [ -n "${DISABLE_CLASH_DNS:-}" ]; then
         case "$(echo "$DISABLE_CLASH_DNS" | tr '[:upper:]' '[:lower:]')" in
@@ -311,6 +315,9 @@ apply_config_overrides() {
                 ;;
         esac
     fi
+
+    cp "$config_file" "$APP_CONFIG_FILE" 2>/dev/null || true
+    log "💾 Synced Docker-ready config to ${APP_CONFIG_FILE}"
 }
 
 

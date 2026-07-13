@@ -10,6 +10,7 @@
 - 支持自定义 User-Agent 和额外的 HTTP 头部（当下载订阅需要时使用）。
 - 支持跳过 TLS 证书验证（当 `ALLOW_INSECURE_TLS=true` 时使用）。
 - 支持使用本地`config.yaml`文件而不是订阅 URL (当 `CLASH_SUBSCRIPTION_URL` 未设置时使用)。
+- 自动修正机场订阅中与 Docker 不兼容的设置（`allow-lan`、`external-controller` 等），端口映射开箱即用。
 
 ## 快速开始
 
@@ -70,6 +71,17 @@ services:
 - `SUBSCRIPTION_USER_AGENT`：(可选) 有些订阅下载需要使用的 User-Agent, 已内置默认值, 亦可自定义。
 - `SUBSCRIPTION_HEADERS`：(可选) 下载订阅时额外的自定义头。
 - `DISABLE_CLASH_DNS`：(可选 `true`/`false`) 根据需要禁用 Clash 内置 DNS 行为（少数高级场景）。
+
+## 自动 Docker 适配
+
+机场订阅通常面向桌面客户端，部分默认值在 Docker 中会导致端口映射无法使用。镜像在启动和订阅更新时会**自动修正**，无需额外配置：
+
+- `external-controller`：去除 `127.0.0.1` 绑定，仪表盘可从宿主机访问（如 `9091:9090`）
+- `allow-lan`：设为 `true`，代理端口映射对宿主机及局域网可用（如 `7890:7890`）
+
+修正后的配置会同步保存到 `./config/config.yaml`（挂载卷备份）。若需完全保留自定义配置，可不设置 `CLASH_SUBSCRIPTION_URL`，直接在 `./config/config.yaml` 中放置本地配置文件。
+
+> 提示：订阅模式下，仪表盘里手动修改的自定义规则在容器重建或定时更新后会被订阅内容覆盖；节点和上述基础设置每次会自动修正。
 
 ## 查看UI 界面
 浏览器打开 URL:  http://<宿主机地址>:9091/ui
