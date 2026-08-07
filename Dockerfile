@@ -77,7 +77,8 @@ RUN mkdir -p /app/tools && \
 COPY config/config.yaml.example /config/config.yaml.example
 
 # Expose the necessary ports (adjust as needed)
-EXPOSE 7890 7891 9090
+# Defaults match CLASH_PORT / CLASH_MIXED_PORT / CLASH_CONTROLLER_PORT env defaults
+EXPOSE 7890 7891 10808 9090
 
 # Copy healthcheck script and use it for Docker HEALTHCHECK
 COPY scripts/*.sh /app/scripts/

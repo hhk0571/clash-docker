@@ -53,9 +53,10 @@ services:
       ### (可选) 启用本地 subconverter 服务进行多订阅合并 ###
       # SUBCONVERTER_ENABLED: true
     ports:
-      - "7890:7890"  # HTTP proxy
-      - "7891:7891"  # SOCKS5 proxy
-      - "9091:9090"  # Dashboard 仪表盘 (host:port -> container:9090) / 根据需要设置宿主机端口
+      - "7890:7890"  # HTTP proxy (port)
+      - "7891:7891"  # SOCKS5 proxy (socks-port)
+      - "17890:17890"  # Mixed 混合代理端口 (mixed-port, HTTP+SOCKS5) （三个代理端口，大部分情况只配这一个就行）
+      - "9091:9090"  # Dashboard 仪表盘(host:port -> container:9090)  / 根据需要设置宿主机端口
     volumes:
       - ./config:/app/config
     restart: unless-stopped
@@ -71,6 +72,15 @@ services:
 - `SUBSCRIPTION_USER_AGENT`：(可选) 有些订阅下载需要使用的 User-Agent, 已内置默认值, 亦可自定义。
 - `SUBSCRIPTION_HEADERS`：(可选) 下载订阅时额外的自定义头。
 - `DISABLE_CLASH_DNS`：(可选 `true`/`false`) 根据需要禁用 Clash 内置 DNS 行为（少数高级场景）。
+
+- `CLASH_PORT`：(可选) 自定义 HTTP/HTTPS 代理端口，默认 `7890`。设置后每次拉取/应用配置都会强制改写 `port` 字段（存在则改、缺失则追加）。
+- `CLASH_SOCKS_PORT`：(可选) 自定义 SOCKS5 代理端口，默认 `7891`。设置后强制改写 `socks-port` 字段（存在则改、缺失则追加）。
+- `CLASH_MIXED_PORT`：(可选 建议配置) 自定义混合代理端口（同时支持 HTTP 和 SOCKS5），默认 `10808`。设置后强制改写 `mixed-port` 字段（存在则改、缺失则追加）。
+> **注意**：`port/socks-port/mixed-port` 三个代理端口中，**大多数情况下只需配置 `CLASH_MIXED_PORT` 即可**。如果同时设置了多个端口环境变量，它们会全部生效，请留意宿主机端口与容器端口的映射关系是否冲突。
+
+- `CLASH_CONTROLLER_PORT`：(可选) 自定义 Clash 管理端口，默认 `19090`。设置后强制改写 `external-controller` 的端口，同时用于配置重载与健康检查。
+
+> 提示：机场订阅可能只包含其中一种或两种代理端口（`port`/`socks-port`/`mixed-port`），镜像会自动补齐缺失字段，确保你配置的端口在容器中都能正常监听。
 
 ## 自动 Docker 适配
 
