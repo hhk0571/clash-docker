@@ -106,6 +106,30 @@ if [ -f /app/config/geoip.metadb ]; then
     log "🌏 Updating geoip.metadb from /app/config/"
     cp /app/config/geoip.metadb "$CLASH_CONFIG_DIR/geoip.metadb"
 fi
+
+# Update geosite.dat from external mount if provided
+if [ -f /app/config/geosite.dat ]; then
+    log "🌏 Updating geosite.dat from /app/config/"
+    cp /app/config/geosite.dat "$CLASH_CONFIG_DIR/geosite.dat"
+fi
+
+# Ensure geo data files are present. If the build-time download failed (or the
+# image was built without network), try to fetch them at runtime as a fallback.
+# GEO_DAT_URL can override the download base URL (same semantics as the build arg).
+ensure_geo_files() {
+    _geo_url="${GEO_DAT_URL:-https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest}"
+    for _f in geoip.metadb geosite.dat; do
+        [ -f "$CLASH_CONFIG_DIR/$_f" ] && continue
+        log "🌏 $_f missing, downloading from ${_geo_url}/$_f ..."
+        if ! curl -fsSL --connect-timeout 10 --retry 3 -o "$CLASH_CONFIG_DIR/$_f" "${_geo_url%/}/$_f"; then
+            log "⚠️ Failed to download $_f; mihomo will attempt its own download at startup"
+            rm -f "$CLASH_CONFIG_DIR/$_f"
+        else
+            log "✅ $_f downloaded"
+        fi
+    done
+}
+ensure_geo_files
 apply_config_overrides "$CLASH_CONFIG_FILE"
 
 

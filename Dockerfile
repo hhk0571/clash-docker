@@ -44,13 +44,47 @@ RUN mkdir -p /root/.config/clash/dashboard && \
     rm -rf /tmp/* /var/tmp/* && \
     echo "MetaCubeXD dashboard downloaded and extracted"
 
-# Download GeoIP database and copy to runtime directory
-RUN mkdir -p /root/.config/clash && \
-    echo "Downloading GeoIP database..." && \
-    wget -O /root/.config/clash/geoip.metadb \
-    https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb && \
-    rm -rf /tmp/* /var/tmp/* && \
-    echo "GeoIP database downloaded: $(ls -lh /root/.config/clash/geoip.metadb | awk '{print $5}')"
+# Download GeoIP database and geosite database into the runtime directory.
+# Failure-tolerant strategy (geo data is degradable, so it must not abort the build):
+#   1. Each URL is retried up to 3 times;
+#   2. If GEO_DAT_URL (custom mirror) is set it is tried first, then falls back
+#      to the official GitHub release and a public mirror;
+#   3. If every attempt fails the build continues with a warning — the missing
+#      file can later be provided via the /app/config mount, or mihomo will try
+#      to fetch it itself at startup.
+# Note: downloads of the mihomo binary / dashboard / subconverter stay fatal,
+# because the image cannot work without them.
+ARG GEO_DAT_URL=""
+RUN set -u; \
+    mkdir -p /root/.config/clash; \
+    if [ -n "${GEO_DAT_URL:-}" ]; then \
+        GEO_URL_LIST="${GEO_DAT_URL} https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest https://ghfast.top/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest"; \
+    else \
+        GEO_URL_LIST="https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest https://ghfast.top/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest"; \
+    fi; \
+    fetch_geo() { \
+        _file="$1"; \
+        for _base in $GEO_URL_LIST; do \
+            _try=1; \
+            while [ "$_try" -le 3 ]; do \
+                echo "⬇️  Downloading ${_file} from ${_base} (attempt ${_try}/3) ..."; \
+                if wget -T 30 -q -O "/root/.config/clash/${_file}" "${_base}/${_file}"; then \
+                    echo "✅ ${_file} downloaded from ${_base}"; \
+                    return 0; \
+                fi; \
+                rm -f "/root/.config/clash/${_file}"; \
+                _try=$((_try + 1)); \
+                sleep 3; \
+            done; \
+        done; \
+        echo "⚠️ WARNING: failed to download ${_file} from all sources; build continues."; \
+        echo "    You can provide it later via the /app/config mount (${_file})."; \
+        return 0; \
+    }; \
+    fetch_geo geoip.metadb; \
+    fetch_geo geosite.dat; \
+    rm -rf /tmp/* /var/tmp/*; \
+    echo "Geo databases present in /root/.config/clash:"; ls -lh /root/.config/clash/ || true
 
 
 # Download subconverter and copy to runtime directory

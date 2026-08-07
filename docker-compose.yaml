@@ -8,6 +8,11 @@ services:
         HTTP_PROXY: "${http_proxy:-}"
         https_proxy: "${http_proxy:-}"
         HTTPS_PROXY: "${http_proxy:-}"
+        ## Download base URL for geoip.metadb / geosite.dat (build time).
+        ## Defaults to https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest
+        ## Set to a GitHub mirror/proxy if direct downloads fail, e.g.:
+        ##   GEO_DAT_URL=https://ghfast.top/https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest
+        GEO_DAT_URL: "${GEO_DAT_URL:-}"
     image: hhk0571/clash-for-linux:latest
     environment:
       ## Timezone setting
