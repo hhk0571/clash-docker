@@ -13,7 +13,9 @@ on:
       - master
 
 env:
-  DOCKER_REPO: ${{ secrets.DOCKER_HUB_USERNAME }}/clash-for-linux
+  # Use repository owner for image name so fork PR builds get a valid tag
+  # (secrets are unavailable on pull_request workflows from forks).
+  DOCKER_REPO: ${{ github.repository_owner }}/clash-for-linux
 
 jobs:
   build:
