@@ -27,6 +27,19 @@ SUBSCRIPTION_USER_AGENT="${SUBSCRIPTION_USER_AGENT:-Mozilla/5.0 (X11; Linux x86_
 SUBSCRIPTION_HEADERS="${SUBSCRIPTION_HEADERS:-}"
 # Option to disable Clash DNS behavior (true/false)
 DISABLE_CLASH_DNS="${DISABLE_CLASH_DNS:-}"
+# Custom proxy/controller ports (optional). When set, the fetched config is
+# rewritten to use these ports. Leave empty to keep the ports from the config.
+# - CLASH_PORT:            HTTP/HTTPS proxy port     (config key: port)
+# - CLASH_SOCKS_PORT:      SOCKS5 proxy port         (config key: socks-port)
+# - CLASH_MIXED_PORT:      HTTP+SOCKS5 mixed port    (config key: mixed-port)
+# - CLASH_CONTROLLER_PORT: external controller port  (config key: external-controller)
+CLASH_PORT="${CLASH_PORT:-}"
+CLASH_SOCKS_PORT="${CLASH_SOCKS_PORT:-}"
+CLASH_MIXED_PORT="${CLASH_MIXED_PORT:-}"
+CLASH_CONTROLLER_PORT="${CLASH_CONTROLLER_PORT:-}"
+# Clash API endpoint used for config reload. Derived from CLASH_CONTROLLER_PORT
+# by default; override explicitly if the API should be reached elsewhere.
+CLASH_API="${CLASH_API:-http://127.0.0.1:${CLASH_CONTROLLER_PORT:-9090}}"
 
 # Subconverter controls
 # Enable subconverter (true/false). When true, URLs will be sent to subconverter
@@ -45,6 +58,33 @@ export SUBCONVERTER_URL
 
 
 trim() { echo "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'; }
+
+# Validate a port number (1-65535). Returns 0 if valid, 1 otherwise.
+validate_port() {
+    case "$1" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+    [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
+
+# Override a single proxy port field (port/socks-port/mixed-port) when env value is set.
+# If the field already exists in the config it is rewritten; otherwise it is appended.
+override_proxy_port() {
+    local config_file="$1"
+    local field="$2"
+    local value="$3"
+
+    if [ -z "$value" ] || ! validate_port "$value"; then
+        return 0
+    fi
+    if grep -qE "^${field}:" "$config_file"; then
+        log "🔌 Setting ${field} to ${value}"
+        sed -i "s|^${field}:.*|${field}: ${value}|" "$config_file"
+    else
+        log "🔌 ${field} not found in config, adding ${field}: ${value}"
+        echo "${field}: ${value}" >> "$config_file"
+    fi
+}
 
 # Parse `CLASH_SUBSCRIPTION_URL` (may contain multiple URLs) into an array (split by newline, comma or semicolon)
 gather_urls() {
@@ -281,14 +321,31 @@ apply_config_overrides() {
         fi
     fi
 
-    # Strip IP/hostname from external-controller so it binds on 0.0.0.0
+    # Override proxy ports (port/socks-port/mixed-port) from env values.
+    # When an env var is set the field is always written (existing → rewrite, missing → append).
+    # When an env var is empty the field is left untouched.
+    override_proxy_port "$config_file" "port" "$CLASH_PORT"
+    override_proxy_port "$config_file" "socks-port" "$CLASH_SOCKS_PORT"
+    override_proxy_port "$config_file" "mixed-port" "$CLASH_MIXED_PORT"
+
+    # Strip IP/hostname from external-controller so it binds on 0.0.0.0.
     # Handles: '127.0.0.1:9090', 127.0.0.1:9090, localhost:9090, etc.
     if grep -qE '^external-controller:' "$config_file"; then
-        log "🌐 Stripping IP from external-controller to bind on 0.0.0.0"
-        sed -i 's/^\(external-controller:[[:space:]]*\)[^:]*:\([0-9]*\).*/\1:\2/' "$config_file"
+        if [ -n "$CLASH_CONTROLLER_PORT" ] && validate_port "$CLASH_CONTROLLER_PORT"; then
+            log "🌐 Setting external-controller port to ${CLASH_CONTROLLER_PORT} (bind 0.0.0.0)"
+            sed -i "s|^\(external-controller:[[:space:]]*\)[^:]*:\([0-9]*\).*|\1:${CLASH_CONTROLLER_PORT}|" "$config_file"
+        else
+            log "🌐 Stripping IP from external-controller to bind on 0.0.0.0"
+            sed -i 's/^\(external-controller:[[:space:]]*\)[^:]*:\([0-9]*\).*/\1:\2/' "$config_file"
+        fi
     else
-        log "🌐 external-controller not found in config, adding default :9090"
-        echo "external-controller: :9090" >> "$config_file"
+        if [ -n "$CLASH_CONTROLLER_PORT" ] && validate_port "$CLASH_CONTROLLER_PORT"; then
+            log "🌐 external-controller not found in config, adding :${CLASH_CONTROLLER_PORT}"
+            echo "external-controller: :${CLASH_CONTROLLER_PORT}" >> "$config_file"
+        else
+            log "🌐 external-controller not found in config, adding default :9090"
+            echo "external-controller: :9090" >> "$config_file"
+        fi
     fi
 
     # Allow non-localhost connections for Docker port mapping

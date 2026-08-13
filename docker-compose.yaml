@@ -45,10 +45,25 @@ services:
       ## Disable DNS only when you really need to
       # DISABLE_CLASH_DNS: ${DISABLE_CLASH_DNS:-}
 
+      ## Runtime fallback download base URL for geoip.metadb / geosite.dat.
+      ## Only used when the files are missing inside the image (e.g. the
+      ## build-time download failed). Same semantics as the build arg.
+      # GEO_DAT_URL: ${GEO_DAT_URL:-}
+
+      ## port=HTTP/HTTPS, socks-port=SOCKS5, mixed-port=HTTP+SOCKS5
+      ## 三个代理端口中，大多数情况只需配置 MIXED_PORT 即可
+      ## Custom ports (optional). When set, the subscription config is rewritten
+      ## to use these ports, and the port mappings below follow them.
+      CLASH_PORT: ${CLASH_PORT:-7890}
+      CLASH_SOCKS_PORT: ${CLASH_SOCKS_PORT:-7891}
+      CLASH_MIXED_PORT: ${CLASH_MIXED_PORT:-17890}
+      CLASH_CONTROLLER_PORT: ${CLASH_CONTROLLER_PORT:-19090}
+
     ports:
-      - "7890:7890"  # HTTP proxy
-      - "7891:7891"  # SOCKS5 proxy
-      - "9091:9090"  # External controller / Dashboard (host:port -> container:9090)
+      - "${CLASH_PORT:-7890}:${CLASH_PORT:-7890}"  # HTTP proxy (port)
+      - "${CLASH_SOCKS_PORT:-7891}:${CLASH_SOCKS_PORT:-7891}"  # SOCKS5 proxy (socks-port)
+      - "${CLASH_MIXED_PORT:-17890}:${CLASH_MIXED_PORT:-17890}"  # Mixed proxy (mixed-port, HTTP+SOCKS5)
+      - "${CLASH_CONTROLLER_PORT:-9090}:9090"  # External controller / Dashboard
     volumes:
       - ./config:/app/config
     restart: unless-stopped
