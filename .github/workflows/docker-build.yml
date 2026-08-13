@@ -60,6 +60,9 @@ jobs:
           # Only push when it's a tag, otherwise just build for testing
           push: ${{ steps.version.outputs.IS_TAG == 'true' }}
           tags: ${{ steps.version.outputs.TAGS }}
+          # Bust stale GHA cache that may carry wrong TARGETARCH from prior builds
+          build-args: |
+            CACHEBUST=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

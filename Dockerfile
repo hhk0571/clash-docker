@@ -1,10 +1,14 @@
 FROM alpine:3.19
 
-# Target platform arguments for multi-arch support (provided by buildx).
-ARG TARGETPLATFORM=linux/amd64
-ARG TARGETARCH=amd64
+# Platform args are injected by buildx per target platform.
+# Do NOT set defaults here — "=linux/amd64" / "=amd64" would override buildx
+# and every arch manifest would download amd64 binaries (see issue #arm64).
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG CACHEBUST
 # Install necessary dependencies (tzdata needed for TZ environment variable)
-RUN { [ -n "${http_proxy}" ] && echo "Using proxy: ${http_proxy}" || true; } \
+RUN echo "cache=${CACHEBUST:-}" > /dev/null \
+    && { [ -n "${http_proxy}" ] && echo "Using proxy: ${http_proxy}" || true; } \
     && apk add --no-cache curl bash wget gzip tar tzdata dcron \
     && rm -rf /tmp/* /var/tmp/* /var/lib/apt/lists/* /var/cache/apt/archives/*
 
@@ -15,6 +19,7 @@ WORKDIR /clash-for-linux
 # amd64: use mihomo-linux-amd64-v1-<version>.gz (x86-64-v1 baseline). The short name
 # mihomo-linux-amd64-<version>.gz is the v3 microarchitecture build and fails on older
 # CPUs with: "This program can only be run on AMD64 processors with v3 microarchitecture support."
+ARG TARGETARCH
 RUN MIHOMO_VERSION="v1.19.24" && \
     case ${TARGETARCH} in \
         amd64) \
@@ -30,7 +35,7 @@ RUN MIHOMO_VERSION="v1.19.24" && \
     wget -O /tmp/clash.gz "https://github.com/MetaCubeX/mihomo/releases/download/${MIHOMO_VERSION}/${CLASH_ASSET}" && \
     gunzip /tmp/clash.gz && \
     mv /tmp/clash /usr/local/bin/clash && \
-    chmod +x /usr/local/bin/clash #&& \
+    chmod +x /usr/local/bin/clash && \
     rm -rf /tmp/* /var/tmp/* && \
     echo "Mihomo ${MIHOMO_VERSION} downloaded and installed as /usr/local/bin/clash"
 
@@ -87,6 +92,7 @@ RUN set -u; \
 
 
 # Download subconverter and copy to runtime directory
+ARG TARGETARCH
 RUN mkdir -p /app/tools && \
     SUBCONVERTER_VERSION="v0.9.0" && \
     case ${TARGETARCH} in \
