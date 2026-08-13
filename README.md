@@ -3,6 +3,16 @@
 
 镜像（Docker Hub）：https://hub.docker.com/r/hhk0571/clash-for-linux
 
+## 支持架构
+
+镜像通过 Docker Buildx 构建，支持以下平台：
+
+- `linux/amd64`
+- `linux/arm64`（树莓派 4/5、Apple Silicon 等）
+- `linux/arm/v7`（树莓派 3 等）
+
+Docker 会自动拉取与宿主机匹配的 manifest。在 Apple Silicon 或 ARM 服务器上直接 `docker pull` / `docker compose up` 即可，无需 QEMU 模拟。
+
 ## 主要特性
 - 订阅自动拉取并应用到 Clash（支持定时/间隔更新）。
 - 订阅链接格式自动转换: 支持 Clash, ClashR, V2Ray, Trojan, Surge, SS, SSR, SSD, Surfboard, Mellow, Loon, Quantumult 等多种订阅格式（当 `SUBCONVERTER_ENABLED=true` 时使用本地 subconverter 服务进行转换）。

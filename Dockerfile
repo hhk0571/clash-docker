@@ -1,7 +1,6 @@
-FROM --platform=$BUILDPLATFORM alpine:3.19
+FROM alpine:3.19
 
-# Build and target platform arguments for multi-arch support
-ARG BUILDPLATFORM=linux/amd64
+# Target platform arguments for multi-arch support (provided by buildx).
 ARG TARGETPLATFORM=linux/amd64
 ARG TARGETARCH=amd64
 # Install necessary dependencies (tzdata needed for TZ environment variable)
