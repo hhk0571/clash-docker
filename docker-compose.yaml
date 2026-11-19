@@ -26,16 +26,20 @@ services:
       # NO_PROXY: "${no_proxy:-}"
       # no_proxy: "${no_proxy:-}"
 
-      ## Clash subscription URL (required) — supports single or multiple entries.
-      ## Recommended in `docker-compose.yml` (YAML block scalar):
-      CLASH_SUBSCRIPTION_URL: |
-        https://example.com/sub1
-        https://example.com/sub2
+      ## Optional subscription URL; empty uses the mounted/local configuration.
+      CLASH_SUBSCRIPTION_URL: ${CLASH_SUBSCRIPTION_URL:-}
       ## Note: .env files usually don't support YAML block scalars; use a
       ## comma-separated value or set a single URL in that case.
-      # CLASH_SUBSCRIPTION_URL: ${CLASH_SUBSCRIPTION_URL:-}
       ## Clash API secret for external UI authentication (default is empty)
       CLASH_API_SECRET: ${CLASH_API_SECRET:-}
+      CLASH_HTTP_PORT: ${CLASH_HTTP_PORT:-0}
+      CLASH_SOCKS_PORT: ${CLASH_SOCKS_PORT:-0}
+      CLASH_MIXED_PORT: ${CLASH_MIXED_PORT:-7890}
+      CLASH_EXTERNAL_CONTROLLER_PORT: ${CLASH_EXTERNAL_CONTROLLER_PORT:-9090}
+      CLASH_PROXY_USERNAME: ${CLASH_PROXY_USERNAME:-}
+      CLASH_PROXY_PASSWORD: ${CLASH_PROXY_PASSWORD:-}
+      CLASH_PROXY_USERS_JSON: ${CLASH_PROXY_USERS_JSON:-}
+      CLASH_API: ${CLASH_API:-}
       ## Enable local subconverter for multi-subscription merging (default is false)
       SUBCONVERTER_ENABLED: ${SUBCONVERTER_ENABLED:-false}
       ## Update hour (0-23) for daily subscription updates (default is 3)
@@ -46,9 +50,11 @@ services:
       # DISABLE_CLASH_DNS: ${DISABLE_CLASH_DNS:-}
 
     ports:
-      - "7890:7890"  # HTTP proxy
-      - "7891:7891"  # SOCKS5 proxy
-      - "9091:9090"  # External controller / Dashboard (host:port -> container:9090)
+      - "${CLASH_MIXED_PORT:-7890}:${CLASH_MIXED_PORT:-7890}"
+      - "9091:${CLASH_EXTERNAL_CONTROLLER_PORT:-9090}"
+      # Optional: enable CLASH_HTTP_PORT / CLASH_SOCKS_PORT before mapping:
+      # - "${CLASH_HTTP_PORT}:${CLASH_HTTP_PORT}"
+      # - "${CLASH_SOCKS_PORT}:${CLASH_SOCKS_PORT}"
     volumes:
       - ./config:/app/config
     restart: unless-stopped

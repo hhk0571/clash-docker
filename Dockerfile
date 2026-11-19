@@ -9,7 +9,7 @@ ARG CACHEBUST
 # Install necessary dependencies (tzdata needed for TZ environment variable)
 RUN echo "cache=${CACHEBUST:-}" > /dev/null \
     && { [ -n "${http_proxy}" ] && echo "Using proxy: ${http_proxy}" || true; } \
-    && apk add --no-cache curl bash wget gzip tar tzdata dcron \
+    && apk add --no-cache curl bash wget gzip tar tzdata dcron python3 py3-yaml \
     && rm -rf /tmp/* /var/tmp/* /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Set the working directory
@@ -115,15 +115,12 @@ RUN mkdir -p /app/tools && \
 # Copy configuration files
 COPY config/config.yaml.example /config/config.yaml.example
 
-# Expose the necessary ports (adjust as needed)
-EXPOSE 7890 7891 9090
-
-# Copy healthcheck script and use it for Docker HEALTHCHECK
-COPY scripts/*.sh /app/scripts/
+# Copy Python runtime and thin Shell entrypoint
+COPY scripts/ /app/scripts/
 RUN chmod +x /app/scripts/*.sh
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD ["/bin/sh", "/app/scripts/healthcheck.sh"]
+    CMD ["/usr/bin/python3", "/app/scripts/clash.py", "healthcheck"]
 
 # Set the entrypoint
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]
