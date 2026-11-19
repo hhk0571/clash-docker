@@ -20,6 +20,14 @@ def request(proxy, credentials=None, socks=False):
     return result.returncode, result.stdout
 
 
+def assert_http_status(proxy, expected, credentials=None):
+    code, status = request(proxy, credentials)
+    assert (code, status) == (0, expected), (
+        f"HTTP proxy check ({'credentials supplied' if credentials else 'no credentials'}): "
+        f"expected curl=0 HTTP={expected}, got curl={code} HTTP={status!r}"
+    )
+
+
 def wait_ready():
     for _ in range(90):
         if docker("exec", "clash-smoke", "python3", "/app/scripts/clash.py", "healthcheck", check=False).returncode == 0:
@@ -51,17 +59,17 @@ def main():
                 try:
                     wait_ready()
                     proxy = f"127.0.0.1:{mixed}"
-                    assert request(proxy)[1] == "407"
-                    assert request(proxy, "user:wrong")[1] == "407"
+                    assert_http_status(proxy, "407")
+                    assert_http_status(proxy, "403", "user:wrong")
                     assert request(proxy, "user:password") == (0, "200")
                     assert request(proxy, "user:wrong", socks=True)[0] != 0
                     assert request(proxy, "user:password", socks=True) == (0, "200")
                     if multi_user:
                         assert request(proxy, "second:another:password") == (0, "200")
                         assert request(proxy, "second:another:password", socks=True) == (0, "200")
-                        assert request(proxy, "second:password")[1] == "407"
+                        assert_http_status(proxy, "403", "second:password")
                     docker("exec", "clash-smoke", "python3", "/app/scripts/clash.py", "update")
-                    assert request(proxy)[1] == "407"
+                    assert_http_status(proxy, "407")
                     assert request(proxy, "user:password", socks=True) == (0, "200")
                     if multi_user:
                         assert request(proxy, "second:another:password", socks=True) == (0, "200")

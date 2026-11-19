@@ -28,6 +28,9 @@ services:
 
       ## Optional subscription URL; empty uses the mounted/local configuration.
       CLASH_SUBSCRIPTION_URL: ${CLASH_SUBSCRIPTION_URL:-}
+      ## Identify subscription downloads as a Mihomo client.
+      ## This overrides service env_file; use --env-file for interpolation overrides.
+      SUBSCRIPTION_USER_AGENT: ${SUBSCRIPTION_USER_AGENT:-clash.meta}
       ## Note: .env files usually don't support YAML block scalars; use a
       ## comma-separated value or set a single URL in that case.
       ## Clash API secret for external UI authentication (default is empty)

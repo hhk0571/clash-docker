@@ -140,7 +140,7 @@ CLASH_PROXY_USERS_JSON='[{"username":"alice","password":"password-a"},{"username
 `CLASH_API_SECRET` 是独立的管理密钥，不是代理密码。认证不会加密客户端到代理的连接，公网访问应配合加密入口和访问限制。默认映射绑定所有宿主机接口；仅本机使用可改成 `127.0.0.1:7890:7890` 和 `127.0.0.1:9091:9090`。
 
 ```bash
-# 无认证或错误密码：HTTP 407
+# 未提供认证：HTTP 407；提供错误凭据：HTTP 403
 curl -i -x http://127.0.0.1:7890 http://example.com
 # 正确认证
 curl -I -x http://127.0.0.1:7890 -U 'leo:your-password' https://example.com
@@ -162,13 +162,15 @@ curl -I --proxy socks5h://127.0.0.1:7890 --proxy-user 'leo:your-password' https:
 | `CLASH_UPDATE_INTERVAL` | 空；1–23 小时，从零点按 cron 步长更新；覆盖每日策略，无效值回退每日策略 |
 | `CLASH_CRON_TEST` | 1 时每分钟更新 |
 | `ALLOW_INSECURE_TLS` | `false`；`true` 时跳过下载证书校验 |
-| `SUBSCRIPTION_USER_AGENT` | 完整 Chrome 浏览器 User-Agent；可自定义 |
+| `SUBSCRIPTION_USER_AGENT` | 仓库 Compose 默认 `clash.meta`；直接运行镜像且未设置时使用完整 Chrome 浏览器 User-Agent |
 | `SUBSCRIPTION_HEADERS` | 空；单个 `Name: value` 请求头 |
 | `DISABLE_CLASH_DNS` | 空；`true/1/yes` 时禁用已有 `dns.enable` |
 | `GEO_DAT_URL` | 默认 MetaCubeX 官方 Geo 数据发布地址；构建参数与运行时变量分别设置 |
 | TZ | Compose 默认 `Asia/Shanghai` |
 
 自定义下载选项等变量使用 Compose 时需加入 `environment` 才能进入容器；`.env` 不会自动把所有变量传给容器。
+
+仓库 Compose 已显式传入 `SUBSCRIPTION_USER_AGENT`，默认 `clash.meta`，可通过 `.env` 或宿主机环境变量覆盖。服务级 `env_file` 仅负责注入容器环境，不为 Compose 的 `${变量}` 插值提供值；同名变量以 `environment` 中的设置为准。
 
 ## 配置更新和运行管理
 
