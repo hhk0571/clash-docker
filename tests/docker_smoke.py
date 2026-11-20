@@ -6,6 +6,31 @@ import tempfile
 import time
 
 
+# Match complete argv entries, so the probe's own `python -c` source cannot
+# match. Processes may disappear between glob() and read_bytes().
+INITIALIZER_PROBE = r"""
+import json
+import sys
+from pathlib import Path
+root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path('/proc')
+pids = []
+for path in root.glob('[0-9]*/cmdline'):
+    try:
+        args = path.read_bytes().split(b'\0')
+    except (FileNotFoundError, ProcessLookupError):
+        continue
+    if any(arg.endswith(b'/clash.py') or arg == b'clash.py' for arg in args) and b'initialize' in args:
+        pids.append(path.parent.name)
+print(json.dumps(pids))
+"""
+
+
+def assert_initializer_exited():
+    result = docker("exec", "clash-smoke", "python3", "-c", INITIALIZER_PROBE)
+    pids = json.loads(result.stdout)
+    assert not pids, f"Initialization still running: PIDs {pids}"
+
+
 def docker(*args, check=True):
     return subprocess.run(["docker", *args], check=check, capture_output=True, text=True)
 
@@ -60,8 +85,7 @@ def main():
                     wait_ready()
                     # Initialization must exit before steady state. PID 1 keeps
                     # only the small supervisor, without YAML/network imports.
-                    processes = docker("top", "clash-smoke", "-eo", "args").stdout
-                    assert "clash.py initialize" not in processes, processes
+                    assert_initializer_exited()
                     print(docker("exec", "clash-smoke", "sh", "-c",
                                  "grep -E 'VmRSS|VmHWM' /proc/1/status").stdout)
                     proxy = f"127.0.0.1:{mixed}"
