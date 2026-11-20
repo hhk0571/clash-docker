@@ -58,6 +58,12 @@ def main():
                        "clash-test:local")
                 try:
                     wait_ready()
+                    # Initialization must exit before steady state. PID 1 keeps
+                    # only the small supervisor, without YAML/network imports.
+                    processes = docker("top", "clash-smoke", "-eo", "args").stdout
+                    assert "clash.py initialize" not in processes, processes
+                    print(docker("exec", "clash-smoke", "sh", "-c",
+                                 "grep -E 'VmRSS|VmHWM' /proc/1/status").stdout)
                     proxy = f"127.0.0.1:{mixed}"
                     assert_http_status(proxy, "407")
                     assert_http_status(proxy, "403", "user:wrong")

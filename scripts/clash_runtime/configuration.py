@@ -1,5 +1,4 @@
 """YAML transformations and atomic, private configuration files."""
-import copy
 import os
 import subprocess
 import tempfile
@@ -17,7 +16,6 @@ def transform(raw, settings):
         raise ConfigError("Invalid YAML configuration") from None
     if not isinstance(config, dict):
         raise ConfigError("Configuration root must be a mapping")
-    config = copy.deepcopy(config)
     for key in ("port", "socks-port", "mixed-port"):
         if settings.ports[key]:
             config[key] = settings.ports[key]

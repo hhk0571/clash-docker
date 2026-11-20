@@ -4,6 +4,7 @@ import os
 import signal
 import socket
 import ssl
+import subprocess
 import urllib.error
 from pathlib import Path
 import sys
@@ -15,7 +16,8 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from clash_runtime.settings import Settings, ConfigError, cron_schedule
 from clash_runtime.configuration import transform, validate
-from clash_runtime.runtime import Runtime, healthcheck, run
+from clash_runtime.runtime import Runtime, healthcheck
+from clash_runtime.supervisor import run
 from clash_runtime.subscription import download, fetch, api_request, failure_reason, DEFAULT_USER_AGENT
 
 
@@ -194,6 +196,25 @@ class TransactionTests(unittest.TestCase):
 
 
 class TransportTests(unittest.TestCase):
+    def test_resident_entrypoint_does_not_import_worker_dependencies(self):
+        entrypoint = Path(__file__).resolve().parents[1] / "scripts" / "clash.py"
+        code = (
+            "import runpy, sys; "
+            f"runpy.run_path({str(entrypoint)!r}, run_name='import_check'); "
+            "assert not ({'yaml', 'ssl', 'urllib.request', "
+            "'clash_runtime.runtime', 'clash_runtime.configuration'} & sys.modules.keys())"
+        )
+        subprocess.run([sys.executable, "-c", code], check=True,
+                       env={**os.environ, "PYTHONPATH": str(entrypoint.parent)})
+
+    def test_failed_initializer_prevents_mihomo_start(self):
+        initializer = Mock(pid=100, returncode=1)
+        initializer.poll.return_value = 1
+        with patch("clash_runtime.supervisor.subprocess.Popen", return_value=initializer) as popen, patch("clash_runtime.supervisor.signal.signal"), patch("clash_runtime.supervisor.os.killpg", create=True), self.assertRaisesRegex(ConfigError, "initialization failed"):
+            run(Settings.load({}))
+        self.assertEqual(popen.call_count, 1)
+        initializer.wait.assert_called_once()
+
     def test_safe_download_failure_reasons(self):
         private = "https://private.invalid/secret-token"
         cases = [
@@ -248,10 +269,12 @@ class TransportTests(unittest.TestCase):
     def test_supervisor_reaps_children(self):
         child = Mock()
         child.poll.return_value = 7
-        with patch("clash_runtime.runtime.Runtime") as runtime, patch("clash_runtime.runtime.subprocess.Popen", return_value=child), patch("clash_runtime.runtime.signal.signal"), patch("clash_runtime.runtime.os.killpg", create=True):
+        initializer = Mock(returncode=0)
+        initializer.poll.return_value = 0
+        with patch("clash_runtime.supervisor.subprocess.Popen", side_effect=[initializer, child]) as popen, patch("clash_runtime.supervisor.signal.signal"), patch("clash_runtime.supervisor.os.killpg", create=True):
             self.assertEqual(run(Settings.load({})), 7)
             child.wait.assert_called_once()
-            runtime.return_value.initialize.assert_called_once()
+            self.assertEqual(popen.call_args_list[0].args[0][-1], "initialize")
 
     def test_supervisor_forwards_stop_and_waits(self):
         child = Mock(pid=123)
@@ -261,7 +284,9 @@ class TransportTests(unittest.TestCase):
             handlers[sig] = handler
         def stop_on_sleep(seconds):
             handlers[signal.SIGTERM](signal.SIGTERM, None)
-        with patch("clash_runtime.runtime.Runtime"), patch("clash_runtime.runtime.subprocess.Popen", return_value=child), patch("clash_runtime.runtime.signal.signal", side_effect=register), patch("clash_runtime.runtime.os.killpg", create=True) as kill, patch("clash_runtime.runtime.time.sleep", side_effect=stop_on_sleep):
+        initializer = Mock(returncode=0)
+        initializer.poll.return_value = 0
+        with patch("clash_runtime.supervisor.subprocess.Popen", side_effect=[initializer, child]), patch("clash_runtime.supervisor.signal.signal", side_effect=register), patch("clash_runtime.supervisor.os.killpg", create=True) as kill, patch("clash_runtime.supervisor.time.sleep", side_effect=stop_on_sleep):
             self.assertEqual(run(Settings.load({})), 0)
             kill.assert_any_call(123, signal.SIGTERM)
             child.wait.assert_called_once()
@@ -270,12 +295,14 @@ class TransportTests(unittest.TestCase):
         mihomo, cron = Mock(pid=101), Mock(pid=102)
         mihomo.poll.return_value = 0
         cron.poll.return_value = None
-        with patch("clash_runtime.runtime.Runtime"), patch("clash_runtime.runtime.atomic_write"), patch("clash_runtime.runtime.subprocess.Popen", side_effect=[mihomo, cron]) as popen, patch("clash_runtime.runtime.signal.signal"), patch("clash_runtime.runtime.os.killpg", create=True):
+        initializer = Mock(returncode=0)
+        initializer.poll.return_value = 0
+        with patch("clash_runtime.supervisor.atomic_write"), patch("clash_runtime.supervisor.subprocess.Popen", side_effect=[initializer, mihomo, cron]) as popen, patch("clash_runtime.supervisor.signal.signal"), patch("clash_runtime.supervisor.os.killpg", create=True):
             run(Settings.load({"CLASH_SUBSCRIPTION_URL": "https://example.invalid/sub"}))
         self.assertTrue(popen.call_args_list[0].kwargs["start_new_session"])
-        self.assertEqual(popen.call_args_list[1].args[0], ["crond", "-f"])
-        self.assertFalse(popen.call_args_list[1].kwargs["start_new_session"])
-        self.assertEqual(popen.call_args_list[1].kwargs["process_group"], 0)
+        self.assertEqual(popen.call_args_list[2].args[0], ["crond", "-f"])
+        self.assertFalse(popen.call_args_list[2].kwargs["start_new_session"])
+        self.assertEqual(popen.call_args_list[2].kwargs["process_group"], 0)
 
 
 if __name__ == "__main__":

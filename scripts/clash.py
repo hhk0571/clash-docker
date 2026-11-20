@@ -2,19 +2,22 @@
 """Container lifecycle and maintenance commands."""
 import argparse
 import sys
-from clash_runtime.runtime import Runtime, healthcheck, log, run
+from clash_runtime.supervisor import log, run
 from clash_runtime.settings import ConfigError, Settings
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("run", "update", "healthcheck"))
+    parser.add_argument("command", choices=("run", "initialize", "update", "healthcheck"))
     args = parser.parse_args()
     try:
         settings = Settings.load()
         if args.command == "run":
             return run(settings)
-        if args.command == "update":
+        from clash_runtime.runtime import Runtime, healthcheck, initialize
+        if args.command == "initialize":
+            initialize(settings)
+        elif args.command == "update":
             Runtime(settings).update()
         else:
             healthcheck(settings)

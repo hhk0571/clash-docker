@@ -9,11 +9,14 @@ ARG CACHEBUST
 # Install necessary dependencies (tzdata needed for TZ environment variable)
 RUN echo "cache=${CACHEBUST:-}" > /dev/null \
     && { [ -n "${http_proxy}" ] && echo "Using proxy: ${http_proxy}" || true; } \
-    && apk add --no-cache curl bash wget gzip tar tzdata dcron python3 py3-yaml \
+    && apk add --no-cache curl wget gzip tar tzdata dcron python3 py3-yaml \
     && rm -rf /tmp/* /var/tmp/* /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Set the working directory
 WORKDIR /clash-for-linux
+
+# Do not create bytecode files in the container writable layer.
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Download Clash Meta binary based on target architecture.
 # amd64: use mihomo-linux-amd64-v1-<version>.gz (x86-64-v1 baseline). The short name

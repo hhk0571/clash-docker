@@ -199,6 +199,23 @@ docker compose exec clash python3 /app/scripts/clash.py healthcheck
 
 ## 开发与测试
 
+### 内存与镜像体积
+
+常驻 Python 进程仅负责子进程监督、信号转发与退出处理，不加载 YAML、SSL 和订阅下载模块。启动配置处理在独立的 `initialize` 子进程中执行，完成后退出；定时更新仍由 cron 启动临时 Python 进程。因此配置解析和下载的内存不会留在常驻监督进程中。初始化和更新期间仍会出现临时内存峰值。
+
+镜像保留 Alpine + 系统 `python3` / `py3-yaml`，不安装 pip 或编译工具，并移除了未使用的 Bash。官方 `python:alpine` 是可选方案，但需要同时比较 YAML、时区、cron 和其他最终依赖；`python:slim` 基于 Debian，并不意味着比当前 Alpine 组合更小。当前未宣称具体的体积或内存降幅，需实际构建并用相同订阅、配置、架构及流量比较。
+
+重建后等待健康检查通过、空闲一段时间，再查看容器总内存和 PID 1 的 RSS（两者统计范围不同）：
+
+```bash
+docker compose up -d --build
+docker stats --no-stream
+docker compose exec clash sh -c "grep -E 'VmRSS|VmHWM' /proc/1/status"
+docker image inspect hhk0571/clash-for-linux:latest --format '{{.Size}}'
+```
+
+### 验证
+
 ```bash
 python -m pip install PyYAML==6.0.3
 python -m unittest discover -s tests -v

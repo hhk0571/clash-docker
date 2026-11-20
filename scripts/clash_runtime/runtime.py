@@ -1,14 +1,12 @@
-"""Transactional updates and PID 1 supervision."""
+"""Short-lived initialization, transactional updates and health checks."""
 import contextlib
 import os
-import signal
-import subprocess
 import time
 from pathlib import Path
 import urllib.request
 import yaml
 from .configuration import atomic_write, transform, validate
-from .settings import ConfigError, cron_schedule
+from .settings import ConfigError
 from .subscription import api_request, download, fetch
 
 
@@ -128,75 +126,18 @@ def healthcheck(settings):
         raise ConfigError("Mihomo healthcheck failed")
 
 
-def run(settings):
-    runtime, children = Runtime(settings), []
-    stopping = False
-
-    def stop(signum, frame):
-        nonlocal stopping
-        stopping = True
-        for child in children:
+def initialize(settings):
+    if settings.get("SUBCONVERTER_ENABLED").lower() == "true":
+        endpoint = settings.get("SUBCONVERTER_URL", "http://localhost:25500").rstrip("/") + "/version"
+        for _ in range(30):
             try:
-                os.killpg(child.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        signal.signal(sig, stop)
-
-    def start(command, new_session=True, **kwargs):
-        if stopping:
-            raise ConfigError("Startup interrupted")
-        # dcron calls setpgid itself, which fails for a session leader. Give it
-        # a dedicated process group without setsid; retain group-based shutdown.
-        child = subprocess.Popen(command, start_new_session=new_session,
-                                 **({} if new_session else {"process_group": 0}), **kwargs)
-        children.append(child)
-        return child
-
-    try:
-        schedule = cron_schedule(settings) if settings.get("CLASH_SUBSCRIPTION_URL") else None
-        if settings.get("SUBCONVERTER_ENABLED").lower() == "true":
-            # Subconverter may log full subscription URLs; do not forward its output.
-            converter = start(["/app/tools/subconverter/subconverter"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            endpoint = settings.get("SUBCONVERTER_URL", "http://localhost:25500").rstrip("/") + "/version"
-            for _ in range(30):
-                if stopping or converter.poll() is not None:
-                    raise ConfigError("Subconverter startup failed")
-                try:
-                    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-                    with opener.open(endpoint, timeout=1):
-                        break
-                except OSError:
-                    time.sleep(1)
-            else:
-                raise ConfigError("Subconverter readiness timed out")
-        runtime.geo_files()
-        runtime.initialize()
-        mihomo = start(["/usr/local/bin/clash", "-d", str(runtime.directory), "-ext-ui", "dashboard"])
-        if schedule:
-            command = f"{schedule} /usr/bin/python3 /app/scripts/clash.py update >/proc/1/fd/1 2>&1\n"
-            atomic_write("/etc/crontabs/root", command.encode())
-            start(["crond", "-f"], new_session=False)
-            log("Subscription scheduler started: " + schedule)
-        while not stopping:
-            for child in children:
-                code = child.poll()
-                if code is not None:
-                    if child is mihomo:
-                        return code if code >= 0 else 128 - code
-                    raise ConfigError("Auxiliary service exited unexpectedly")
-            time.sleep(0.2)
-        return 0
-    finally:
-        stop(None, None)
-        deadline = time.monotonic() + 8
-        for child in children:
-            try:
-                child.wait(timeout=max(0, deadline - time.monotonic()))
-            except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(child.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                child.wait()
+                opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                with opener.open(endpoint, timeout=1):
+                    break
+            except OSError:
+                time.sleep(1)
+        else:
+            raise ConfigError("Subconverter readiness timed out")
+    runtime = Runtime(settings)
+    runtime.geo_files()
+    runtime.initialize()
